@@ -61,12 +61,21 @@ function toBits(num)
     return t
 end
 
+function slurp(path)
+    local f = io.open(path)
+    local s = f:read("*a")
+    f:close()
+    return s
+end
+
 world_order = {2,3,4,5,6,7,8,9,10}
-no_zeroes = false
 attack_power = 10
 canExecute = false
 offset = 0x4E4660
 frame_count = 1
+card_set_data = {{0,1,2,3,4,5,6,7,8,9},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}}
+card_set_data_reset_value = 2
+card_set_data_read = false
 
 function get_journal_array()
     journal_byte_pointer_offset = 0x879408 - offset
@@ -491,10 +500,8 @@ function set_map_cards()
 end
 
 function set_initial_battle_cards(battle_cards_array)
-    for i=0,9 do
-        if (i==0 and not no_zeroes) or i > 0 then
-            add_battle_card(battle_cards_array, 1, i)
-        end
+    for k,v in pairs(card_set_data[1]) do
+        add_battle_card(battle_cards_array, 1, v)
     end
 end
 
@@ -506,8 +513,30 @@ function set_cutscene_array(cutscene_array)
 end
 
 function set_initial_deck()
-    initial_deck_array = {1, 0, 9, 17, 1, 0, 8, 17, 1, 0, 7, 17, 1, 0, 6, 17, 1, 0, 5, 17, 1, 0, 4, 17, 1, 0, 3, 17, 1, 0, 2, 17, 1, 0, 1, 17}
-    i = 9
+    initial_deck_array = {}
+    i = 0
+    if card_set_data[1][1] == nil then
+        initial_deck_array[1] = 1
+        initial_deck_array[2] = 0
+        initial_deck_array[3] = 1
+        initial_deck_array[4] = 17
+        initial_deck_array[5] = 1
+        initial_deck_array[6] = 0
+        initial_deck_array[7] = 2
+        initial_deck_array[8] = 17
+        initial_deck_array[9] = 1
+        initial_deck_array[10] = 0
+        initial_deck_array[11] = 3
+        initial_deck_array[12] = 17
+        i = 3
+    end
+    for k,v in pairs(card_set_data[1]) do
+        initial_deck_array[((k-1)*4)+1] = 1
+        initial_deck_array[((k-1)*4)+1] = 0
+        initial_deck_array[((k-1)*4)+1] = v
+        initial_deck_array[((k-1)*4)+1] = 17
+        i = i + 1
+    end
     while i < 99 do
         initial_deck_array[(i*4)+1] = 0
         initial_deck_array[(i*4)+2] = 0
@@ -584,21 +613,36 @@ function set_friend_cards_on_deck_3(friends_array)
     for k,v in pairs(friends_array) do
         deck_3_array[((k-1)*4)+1] = friends_card_values[k]
         deck_3_array[((k-1)*4)+2] = 0
-        deck_3_array[((k-1)*4)+3] = 0
+        deck_3_array[((k-1)*4)+3] = 1
         if v > 0 then
-            deck_3_array[((k-1)*4)+4] = 119
+            deck_3_array[((k-1)*4)+4] = 68
         else
-            deck_3_array[((k-1)*4)+3] = 68
+            deck_3_array[((k-1)*4)+4] = 119
         end
     end
-    WriteArray(deck_3_cards_pointer, deck_3_array, True)
+    WriteArray(deck_3_cards_pointer, deck_3_array, true)
 end
 
 function add_battle_card(battle_cards_array, battle_card_index, battle_card_value)
     index = ((battle_card_index-1) * 10) + 1
-    index = index + battle_card_value
+    index = index + battle_card_value % 10
+    if battle_card_index > 80 and battle_card_value > 9 then
+        battle_card_value = battle_card_value % 10
+    end
     if index <= 870 then
-        battle_cards_array[index] = battle_cards_array[index] + 1
+        if battle_card_value >= 0 and battle_card_value < 10 then
+            battle_cards_array[index] = battle_cards_array[index] + 1
+        elseif battle_card_value >= 10 and battle_card_value < 20  and battle_card_index < 81 then
+            battle_cards_array[index + 0xF0] = battle_cards_array[index + 0xF0] + 1
+        end
+    end
+end
+
+function calculate_cards_to_add(battle_cards_array, battle_card_index, sets_received)
+    index = ((sets_received - 1)%(card_set_data_reset_value-1))+1
+    values = card_set_data[index]
+    for index,battle_card_value in pairs(values) do
+        add_battle_card(battle_cards_array, battle_card_index, battle_card_value)
     end
 end
 
@@ -613,10 +657,6 @@ function read_world_order()
     end
 end
 
-function read_no_zeroes()
-    no_zeroes = file_exists(client_communication_path .. "nozeroes.cfg")
-end
-
 function read_attack_power()
     if file_exists(client_communication_path .. "attackpower.cfg") then
         file = io.open(client_communication_path .. "attackpower.cfg", "r")
@@ -625,6 +665,29 @@ function read_attack_power()
         io.close(file)
     else
         attack_power = 10
+    end
+end
+
+function read_set_data()
+    if file_exists(client_communication_path .. "setdata.cfg") and not card_set_data_read then
+        card_set_data_string = slurp(client_communication_path .. "setdata.cfg")
+        result = {}
+        i = 1
+        for line in string.gmatch(card_set_data_string .. "\n", "(.-)\n") do
+            card_set_data[i] = split(line,",")
+            i = i + 1
+        end
+        for k,v in pairs(card_set_data) do
+            for ik,iv in pairs(v) do
+                card_set_data[k][ik] = tonumber(iv)
+            end
+        end
+        final_line_number = 21
+        while card_set_data[final_line_number-1][1] == nil do
+            final_line_number = final_line_number - 1
+        end
+        card_set_data_reset_value = final_line_number
+        card_set_data_read = true
     end
 end
 
@@ -675,6 +738,7 @@ function receive_items()
     friend_count = 0
     current_floor = get_current_floor()
     victory = false
+    card_sets_received = {}
     
     j = 1
     
@@ -686,11 +750,13 @@ function receive_items()
         received_item_id = tonumber(io.read())
         io.close(file)
         if received_item_id > 2681000 and received_item_id < 2681200 then
-            for k=0,9 do
-                if (k == 0 and not no_zeroes) or k > 0 then
-                    add_battle_card(battle_cards_array, received_item_id % 2681000, k)
-                end
+            card_index = received_item_id % 2681000
+            if card_sets_received[card_index] == nil then
+                card_sets_received[card_index] = 1
+            else
+                card_sets_received[card_index] = card_sets_received[card_index] + 1
             end
+            calculate_cards_to_add(battle_cards_array, card_index, card_sets_received[card_index])
         elseif received_item_id > 2681200 and received_item_id < 2682000 then
             enemy_card_index = received_item_id % 2681200
             enemy_cards_array[enemy_card_index] = enemy_cards_array[enemy_card_index] + 1
@@ -742,8 +808,6 @@ function receive_items()
     
     if get_time_played() < 10 then
         set_initial_deck()
-    else
-        remove_premium_cards()
     end
     return victory
 end
@@ -859,8 +923,8 @@ function _OnFrame()
         if frame_count % 120 == 0 then
             set_level_up_sleights()
             read_world_order()
-            read_no_zeroes()
             read_attack_power()
+            read_set_data()
             set_attack_power()
             if get_time_played() > 10 then
                 set_cutscene_array(get_calculated_cutscene_array())
