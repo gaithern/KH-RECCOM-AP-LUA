@@ -158,38 +158,58 @@ end
 
 function get_calculated_cutscene_array()
     journal_array_pointer_address = 0x879408 - offset
-    axel_1_offset    = 0x132 --01F
-    larxene_1_offset = 0x134 --06F
-    riku_1_offset    = 0x138 --07F
-    vexen_1_offset   = 0x84  --10F
-    larxene_2_offset = 0x185 --12F
-
+    world_jounal_entry_array_offset = 0x68
+    dp_pointer_address = 0x8793F8 - offset
+    dp_pointer_offset = 0x14
     journal_array_pointer = GetPointer(journal_array_pointer_address)
+    world_journal_entry_array = ReadArray(journal_array_pointer + world_jounal_entry_array_offset, 13, true)
+    dp_pointer = GetPointer(dp_pointer_address)
+    dp = ReadByte(dp_pointer + dp_pointer_offset, true)
+    for world_num, journal_byte in pairs(world_journal_entry_array) do
+        if journal_byte > 0 then
+            world_journal_entry_array[world_num] = 0
+            dp = dp + 1
+        end
+    end
     
-    axel_1_defeated             = ReadByte(journal_array_pointer + axel_1_offset   , true) > 0
-    larxene_1_defeated          = ReadByte(journal_array_pointer + larxene_1_offset, true) > 0
-    riku_1_defeated             = ReadByte(journal_array_pointer + riku_1_offset   , true) > 0
-    vexen_1_defeated            = ReadByte(journal_array_pointer + vexen_1_offset  , true) > 0
-    larxene_2_defeated          = ReadByte(journal_array_pointer + larxene_2_offset, true) > 0
+    WriteArray(journal_array_pointer + world_jounal_entry_array_offset, world_journal_entry_array, true)
+    WriteByte(dp_pointer + dp_pointer_offset, dp, true)
     
-    if axel_1_defeated and larxene_1_defeated and riku_1_defeated and vexen_1_defeated and larxene_2_defeated then --Clear
-        cutscene_array = {0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 
+    cutscene_array = {0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 
                 0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0x18, 0x00}
-    elseif axel_1_defeated and larxene_1_defeated and riku_1_defeated and vexen_1_defeated then--Riku IV and Larxene II
-        cutscene_array = {0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 
-                0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0xE8, 0x07}
-    elseif axel_1_defeated and larxene_1_defeated and riku_1_defeated then --Vexen I
-        cutscene_array = {0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 
-                0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0xE4, 0x07, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0x18, 0x00}
-    elseif axel_1_defeated and larxene_1_defeated then --Riku I
-        cutscene_array = {0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0xDE, 0x07, 0x0F, 
-                0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0x18, 0x00}
-    elseif axel_1_defeated then --Larxene I
-        cutscene_array = {0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0xDC, 0x07, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 
-                0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0x18, 0x00}
-    else --Axel I
-        cutscene_array = {0x01, 0x00, 0xD2, 0x07, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 
-                0x00, 0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00, 0x18, 0x00}
+    if dp == 0 then --1F Exit Hall: Axel I
+        cutscene_array[3] = 0xD2
+        cutscene_array[4] = 0x07
+    elseif dp == 1 then --6F Exit Hall: Larxene I
+        cutscene_array[23] = 0xDC
+        cutscene_array[24] = 0x07
+    elseif dp == 2 then --7F Exit Hall: Riku I
+        cutscene_array[27] = 0xDE
+        cutscene_array[28] = 0x07
+    elseif dp == 3 then --8F Exit Hall: Riku II
+        cutscene_array[31] = 0xE0
+        cutscene_array[32] = 0x07
+    elseif dp == 4 then --10F Exit Hall: Vexen I
+        cutscene_array[39] = 0xE4
+        cutscene_array[40] = 0x07
+    elseif dp == 5 then --11F Exit Hall: Riku III
+        cutscene_array[43] = 0xE6
+        cutscene_array[44] = 0x07
+    elseif dp == 6 then --Fix?
+        cutscene_array[45] = 0xE7
+        cutscene_array[46] = 0x07
+    elseif dp == 7 then --13F Exit Hall: Riku IV and Larxene II
+        cutscene_array[47] = 0xE8
+        cutscene_array[48] = 0x07
+    end
+    
+    current_room_address = 0x878060 - offset
+    world_pointer_address = 0x879408 - offset
+    world_pointer_offset = -0xFC8
+    world_pointer = GetPointer(world_pointer_address)
+    if ReadShort(current_room_address) == 0x17 and ReadShort(world_pointer + world_pointer_offset, true) == 0x0 and cutscene_array[45] == 0xE7 then
+        dp = dp + 1
+        WriteByte(dp_pointer + dp_pointer_offset, dp, true)
     end
     return cutscene_array
 end
@@ -386,13 +406,6 @@ function get_extra_checks()
         ids[#ids+1] = 2692064
     end
     
-    journal_array_pointer_address = 0x879408 - offset
-    vexen_1_offset   = 0x84  --10F
-    journal_array_pointer = GetPointer(journal_array_pointer_address)
-    if ReadByte(journal_array_pointer + vexen_1_offset  , true) > 0 then --Freeze
-        ids[#ids+1] = 2692032
-    end
-    
     soras_level = get_soras_level()
     if soras_level >= 2 then --Sliding Dash
         ids[#ids+1] = 2692001
@@ -449,6 +462,22 @@ function get_soras_level()
     soras_level_pointer = GetPointer(soras_level_pointer_address, soras_level_pointer_offset)
     soras_level = ReadInt(soras_level_pointer, true)
     return soras_level
+end
+
+function get_dp_checks()
+    dp_location_ids = {}
+    dp_pointer_address = 0x8793F8 - offset
+    dp_pointer_offset = 0x14
+    dp_pointer = GetPointer(dp_pointer_address)
+    dp = ReadByte(dp_pointer + dp_pointer_offset, true)
+    
+    if dp > 3 then
+        dp_location_ids[#dp_location_ids + 1] = 2692035 --Riku II Magnet Spiral
+    end
+    if dp > 4 then
+        dp_location_ids[#dp_location_ids + 1] = 2692032 --Vexen I Freeze
+    end
+    return dp_location_ids
 end
 
 function set_gold_map_cards(gold_map_cards_array)
@@ -622,6 +651,15 @@ function set_friend_cards_on_deck_3(friends_array)
         end
     end
     WriteArray(deck_3_cards_pointer, deck_3_array, true)
+end
+
+function set_friends()
+    friend_pointer_offset = 0x8778E0 - offset
+    friend_offset_1 = 0x8
+    friend_offset_2 = 0x300
+    friend_pointer_1 = GetPointer(friend_pointer_offset, friend_offset_1)
+    friend_pointer_2 = GetPointer(friend_pointer_1, friend_offset_2, true)
+    WriteByte(friend_pointer_2 - 0x278, 0xFF, true)
 end
 
 function add_battle_card(battle_cards_array, battle_card_index, battle_card_value)
@@ -891,6 +929,15 @@ function send_checks(victory)
                 io.close(file)
             end
         end
+        dp_checks = get_dp_checks()
+        for k,v in pairs(dp_checks) do
+            if not file_exists(client_communication_path .. "send" .. tostring(v)) then
+                file = io.open(client_communication_path .. "send" .. tostring(v), "w")
+                io.output(file)
+                io.write("")
+                io.close(file)
+            end
+        end
         
         if final_marluxia_slain() then
             if not file_exists(client_communication_path .. "send2699999") then
@@ -931,6 +978,7 @@ function _OnFrame()
             read_attack_power()
             read_set_data()
             set_attack_power()
+            set_friends()
             if get_time_played() > 10 then
                 set_cutscene_array(get_calculated_cutscene_array())
             end
