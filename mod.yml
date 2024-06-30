@@ -7,15 +7,11 @@ assets:
   method: copy
   source:
   - name: recomAPConnector.lua
-- name: scripts/recomSoftReset.lua
-  method: copy
-  source:
-  - name: recomSoftReset.lua
-- name: scripts/recomTutorialSkip.lua
-  method: copy
-  source:
-  - name: recomTutorialSkip.lua
 - name: scripts/recomAPEXPMultiplier.lua
   method: copy
   source:
   - name: recomAPEXPMultiplier.lua
+- name: scripts/recomAPTutorialSkip.lua
+  method: copy
+  source:
+  - name: recomAPTutorialSkip.lua
