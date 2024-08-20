@@ -77,6 +77,17 @@ frame_count = 1
 card_set_data = {{0,1,2,3,4,5,6,7,8,9},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}}
 card_set_data_reset_value = 2
 card_set_data_read = false
+item_index = 0
+battle_cards_array = {}
+enemy_cards_array = {}
+world_assignment_array = {}
+gold_map_cards_array = {}
+key_to_rewards_found = {}
+friends_array = {}
+sleights_array = {}
+card_sets_received = {}
+friend_count = 0
+victory = false
 
 function get_journal_array()
     journal_pointer_address = {0x87C508, 0x87CC08}
@@ -200,11 +211,13 @@ function get_calculated_cutscene_array()
     elseif dp == 6 then --Fix?
         cutscene_array[45] = 0xE7
         cutscene_array[46] = 0x07
-    elseif dp == 7 then --13F Exit Hall: Riku IV and Larxene II
+    elseif dp == 7 then --12F Exit Hall: Riku IV
         cutscene_array[47] = 0xE8
         cutscene_array[48] = 0x07
+    elseif dp > 7 and get_journal_array()[107] == 0 then --12F Exit Hall: Larxene II
+        cutscene_array[47] = 0xE1
+        cutscene_array[48] = 0x00
     end
-    
     current_room_address = {0x87B160, 0x87B860}
     world_pointer_address = {0x87C508, 0x87CC08}
     world_pointer_offset = -0xFC8
@@ -227,8 +240,8 @@ function get_friend_cards_array()
     friend_pointer_address = {0x87C508, 0x87CC08}
     friend_pointer_offset = 0x147
     friend_pointer = GetPointer(friend_pointer_address[game_version], friend_pointer_offset)
-    friends_array = ReadArray(friend_pointer, 8, true)
-    return friends_array
+    friend_cards_array = ReadArray(friend_pointer, 8, true)
+    return friend_cards_array
 end
 
 function get_rewards_bounties_array()
@@ -360,39 +373,39 @@ function get_extra_checks()
         ids[#ids+1] = 2692030
     end
     
-    friend_array = get_friend_cards_array()
-    if friend_array[1] > 0 then --Donald
+    friend_cards_array = get_friend_cards_array()
+    if friend_cards_array[1] > 0 then --Donald
         ids[#ids+1] = 2692065
         ids[#ids+1] = 2692066
     end
-    if friend_array[2] > 0 then --Goofy
+    if friend_cards_array[2] > 0 then --Goofy
         ids[#ids+1] = 2692068
         ids[#ids+1] = 2692069
         ids[#ids+1] = 2692070
         ids[#ids+1] = 2692071
     end
-    if friend_array[3] > 0 then --Aladdin
+    if friend_cards_array[3] > 0 then --Aladdin
         ids[#ids+1] = 2692072
         ids[#ids+1] = 2692073
     end
-    if friend_array[4] > 0 then --Ariel
+    if friend_cards_array[4] > 0 then --Ariel
         ids[#ids+1] = 2692076
         ids[#ids+1] = 2692077
     end
-    if friend_array[5] > 0 then --Jack
+    if friend_cards_array[5] > 0 then --Jack
         ids[#ids+1] = 2692044
         ids[#ids+1] = 2692074
         ids[#ids+1] = 2692075
     end
-    if friend_array[6] > 0 then --Peter Pan
+    if friend_cards_array[6] > 0 then --Peter Pan
         ids[#ids+1] = 2692078
         ids[#ids+1] = 2692079
     end
-    if friend_array[7] > 0 then --Beast
+    if friend_cards_array[7] > 0 then --Beast
         ids[#ids+1] = 2692080
         ids[#ids+1] = 2692081
     end
-    if friend_array[8] > 0 then --Pluto
+    if friend_cards_array[8] > 0 then --Pluto
         ids[#ids+1] = 2692082
         ids[#ids+1] = 2692083
     end
@@ -530,9 +543,9 @@ function set_map_cards()
     WriteArray(map_cards_pointer, map_cards_array, true)
 end
 
-function set_initial_battle_cards(battle_cards_array)
+function set_initial_battle_cards()
     for k,v in pairs(card_set_data[1]) do
-        add_battle_card(battle_cards_array, 1, v)
+        add_battle_card(1, v)
     end
 end
 
@@ -636,7 +649,7 @@ function set_attack_power()
     end
 end
 
-function set_friend_cards_on_deck_3(friends_array)
+function set_friend_cards_on_deck_3()
     deck_3_cards_pointer_address = {0x87C4F8, 0x87CBF8}
     deck_3_cards_pointer_offset = -0x5C0
     deck_3_cards_pointer = GetPointer(deck_3_cards_pointer_address[game_version], deck_3_cards_pointer_offset)
@@ -671,7 +684,7 @@ function set_blizzard()
     WriteByte(blizzard_journal_pointer, 0x1, true)
 end
 
-function add_battle_card(battle_cards_array, battle_card_index, battle_card_value)
+function add_battle_card(battle_card_index, battle_card_value)
     index = ((battle_card_index-1) * 10) + 1
     index = index + battle_card_value % 10
     if battle_card_index > 80 and battle_card_value > 9 then
@@ -690,11 +703,11 @@ function add_battle_card(battle_cards_array, battle_card_index, battle_card_valu
     end
 end
 
-function calculate_cards_to_add(battle_cards_array, battle_card_index, sets_received)
+function calculate_cards_to_add(battle_card_index, sets_received)
     index = ((sets_received - 1)%(card_set_data_reset_value-1))+1
     values = card_set_data[index]
     for index,battle_card_value in pairs(values) do
-        add_battle_card(battle_cards_array, battle_card_index, battle_card_value)
+        add_battle_card(battle_card_index, battle_card_value)
     end
 end
 
@@ -764,23 +777,16 @@ function piglet_found()
 end
 
 function receive_items()
-    battle_cards_array = get_empty_battle_cards_array()
-    enemy_cards_array = get_empty_enemy_cards_array()
-    world_assignment_array = get_empty_world_assignment_array()
-    gold_map_cards_array = get_empty_gold_map_cards_array()
-    friends_array = get_empty_friends_array()
-    sleights_array = get_empty_sleights_array()
-    friend_count = 0
     current_floor = get_current_floor()
-    victory = false
-    card_sets_received = {}
-    
-    j = 1
-    
-    card_array = set_initial_battle_cards(card_array)
     set_map_cards()
-    while file_exists(client_communication_path .. "AP_" .. tostring(j) .. ".item") do
-        file = io.open(client_communication_path .. "AP_" .. tostring(j) .. ".item", "r")
+    
+    if item_index == 0 then 
+        set_initial_battle_cards()
+        item_index = item_index + 1
+    end
+    
+    while file_exists(client_communication_path .. "AP_" .. tostring(item_index) .. ".item") do
+        file = io.open(client_communication_path .. "AP_" .. tostring(item_index) .. ".item", "r")
         io.input(file)
         received_item_id = tonumber(io.read())
         io.close(file)
@@ -791,7 +797,7 @@ function receive_items()
             else
                 card_sets_received[card_index] = card_sets_received[card_index] + 1
             end
-            calculate_cards_to_add(battle_cards_array, card_index, card_sets_received[card_index])
+            calculate_cards_to_add(card_index, card_sets_received[card_index])
         elseif received_item_id > 2681200 and received_item_id < 2682000 then
             enemy_card_index = received_item_id % 2681200
             enemy_cards_array[enemy_card_index] = enemy_cards_array[enemy_card_index] + 1
@@ -807,11 +813,7 @@ function receive_items()
             end
         elseif received_item_id > 2683300 and received_item_id < 2684000 then
             world_id = received_item_id % 2683300
-            if current_floor == world_id and (current_floor < 2 or current_floor > 10) then
-                gold_map_cards_array[4] = 1
-            elseif current_floor == world_order[world_id-1] then
-                gold_map_cards_array[4] = 1
-            end
+            key_to_rewards_found[#key_to_rewards_found+1] = world_id
         elseif received_item_id > 2685000 and received_item_id < 2686000 then
             friend_id = received_item_id % 2685000
             if friends_array[friend_id] ~= 1 then
@@ -821,11 +823,12 @@ function receive_items()
         elseif received_item_id == 2680000 then
             victory = true
         end
-        j = j + 1
+        item_index = item_index + 1
     end
-    
     if friend_count >= 8 and get_journal_array()[107] > 0 then --if all friends are found and you have beaten Larxene II
         world_assignment_array[13] = 0xD
+    else
+        world_assignment_array[13] = 0x1
     end
     
     if current_floor == 1 or world_assignment_array[current_floor] ~= 1 then
@@ -833,21 +836,23 @@ function receive_items()
         gold_map_cards_array[2] = 1
         gold_map_cards_array[3] = 1
     end
+    for key_index,key_world_id in pairs(key_to_rewards_found) do
+        if current_floor == key_world_id and (current_floor < 2 or current_floor > 10) then
+            gold_map_cards_array[4] = 1
+        elseif current_floor == world_order[key_world_id-1] then
+            gold_map_cards_array[4] = 1
+        end
+    end
     
     set_battle_cards(battle_cards_array)
     set_enemy_cards(enemy_cards_array)
     set_sleights(sleights_array)
     set_gold_map_cards(gold_map_cards_array)
     set_world_assignment(world_assignment_array)
-    set_friend_cards_on_deck_3(friends_array)
-    
-    if get_time_played() < 10 then
-        set_initial_deck()
-    end
-    return victory
+    set_friend_cards_on_deck_3()
 end
 
-function send_checks(victory)
+function send_checks()
     if get_time_played() > 0 then
         journal_array = get_journal_array()
         for k,v in pairs(journal_array) do
@@ -953,6 +958,20 @@ function send_checks(victory)
     
 end
 
+function initialize()
+    read_set_data()
+    battle_cards_array = get_empty_battle_cards_array()
+    enemy_cards_array = get_empty_enemy_cards_array()
+    world_assignment_array = get_empty_world_assignment_array()
+    gold_map_cards_array = get_empty_gold_map_cards_array()
+    friends_array = get_empty_friends_array()
+    sleights_array = get_empty_sleights_array()
+    card_sets_received = {}
+    friend_count = 0
+    item_index = 0
+    victory = false
+end
+
 function _OnInit()
     if GAME_ID == 0x9E3134F5 and ENGINE_TYPE == "BACKEND" then
         canExecute = true
@@ -966,6 +985,7 @@ function _OnInit()
     else
         ConsolePrint("RE:CoM not detected, not running script")
     end
+    initialize()
 end
 
 function _OnFrame()
@@ -978,11 +998,14 @@ function _OnFrame()
             read_set_data()
             set_attack_power()
             set_friends()
-            if get_time_played() > 10 then
+            if get_time_played() > 5 then
                 set_cutscene_array(get_calculated_cutscene_array())
+                receive_items()
+                send_checks()
+            else
+                initialize()
+                set_initial_deck()
             end
-            victory = receive_items()
-            send_checks(victory)
         end
         frame_count = frame_count + 1
     end
