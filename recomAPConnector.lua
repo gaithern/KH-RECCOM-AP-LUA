@@ -455,7 +455,6 @@ function get_extra_checks()
         ids[#ids+1] = 2692031
     end
     
-    world_assignment_array = get_world_assignments_array()
     if world_assignment_array[13] > 1 then --Trinity Limit
         ids[#ids+1] = 2692009
     end
@@ -517,9 +516,13 @@ function set_world_assignment(world_assignment_array)
     world_assignment_pointer_offset = 0x48
     world_assignment_pointer = GetPointer(world_assignment_pointer_address[game_version], world_assignment_pointer_offset)
     current_world_assignments = ReadArray(world_assignment_pointer, #world_assignment_array, true)
+    copy_world_assignment_array = {}
+    for k,v in pairs(world_assignment_array) do
+        copy_world_assignment_array[k] = v
+    end
     current_floor = get_current_floor()
-    world_assignment_array[current_floor] = current_world_assignments[current_floor]
-    WriteArray(world_assignment_pointer, world_assignment_array, true)
+    copy_world_assignment_array[current_floor] = current_world_assignments[current_floor]
+    WriteArray(world_assignment_pointer, copy_world_assignment_array, true)
 end
 
 function set_map_cards()
@@ -870,7 +873,6 @@ function send_checks()
             end
         end
         room_array = get_room_array()
-        world_assignment_array = get_world_assignments_array()
         for k,v in pairs(room_array) do
             if v > 0 then
                 floor_num = math.floor((k-1)/3)+1
