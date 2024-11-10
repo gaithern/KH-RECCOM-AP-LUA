@@ -19,7 +19,7 @@ function file_exists(name)
    if f~=nil then io.close(f) return true else return false end
 end
 
-xp_mult = 1
+xp_mult = 10
 frame_count = 0
 
 function read_exp_multiplier()
