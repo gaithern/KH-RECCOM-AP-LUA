@@ -29,7 +29,7 @@ function read_exp_multiplier()
         xp_mult = tonumber(io.read())
         io.close(file)
     else
-        xp_mult = 10
+        xp_mult = 20
     end
 end
 
