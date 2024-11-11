@@ -19,7 +19,7 @@ function file_exists(name)
    if f~=nil then io.close(f) return true else return false end
 end
 
-xp_mult = 1
+xp_mult = 20
 frame_count = 0
 
 function read_exp_multiplier()
@@ -29,7 +29,7 @@ function read_exp_multiplier()
         xp_mult = tonumber(io.read())
         io.close(file)
     else
-        xp_mult = 1
+        xp_mult = 20
     end
 end
 
